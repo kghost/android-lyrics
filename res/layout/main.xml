@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:id="@+id/Header" android:orientation="vertical"
+	android:layout_width="fill_parent" android:layout_height="fill_parent">
+	<TextView android:id="@+id/Loading" android:text="Loading"
+		android:layout_width="fill_parent" android:layout_height="fill_parent"
+		android:gravity="center" android:visibility="gone" />
+
+	<RelativeLayout android:id="@+id/Main"
+		xmlns:android="http://schemas.android.com/apk/res/android"
+		android:layout_width="fill_parent" android:layout_height="fill_parent">
+		<RelativeLayout android:id="@+id/Header"
+			android:layout_width="fill_parent" android:layout_height="wrap_content"
+			android:background="#001144">
+			<LinearLayout android:orientation="vertical"
+				android:layout_width="fill_parent" android:layout_height="wrap_content">
+				<TextView android:hint="@string/NOT_PLAYING" android:id="@+id/Artist"
+					android:layout_width="fill_parent" android:layout_height="wrap_content"
+					android:gravity="center" />
+				<TextView android:id="@+id/Album" android:layout_width="fill_parent"
+					android:layout_height="wrap_content" android:gravity="center" />
+				<TextView android:id="@+id/Track" android:layout_width="fill_parent"
+					android:layout_height="wrap_content" android:gravity="center" />
+			</LinearLayout>
+		</RelativeLayout>
+
+		<RelativeLayout android:layout_width="fill_parent"
+			android:layout_height="fill_parent" android:layout_below="@+id/Header"
+			android:layout_above="@+id/Bottom">
+			<TextView android:id="@+id/MainNoMusic" android:text="No Music Playing"
+				android:layout_width="fill_parent" android:layout_height="fill_parent"
+				android:gravity="center" />
+
+			<RelativeLayout android:id="@+id/MainNoLyrics"
+				android:layout_width="fill_parent" android:layout_height="fill_parent"
+				android:visibility="gone">
+				<TextView android:text="No Lyrics Info"
+					android:layout_width="fill_parent" android:layout_height="fill_parent"
+					android:gravity="center" />
+				<LinearLayout android:layout_width="fill_parent"
+					android:layout_height="wrap_content" android:gravity="right"
+					android:layout_alignParentTop="true">
+					<Button android:id="@+id/CustomFind" android:layout_width="wrap_content"
+						android:layout_height="wrap_content"
+						android:layout_alignParentBottom="true"
+						android:layout_alignParentRight="true" android:background="@drawable/check" />
+					<Button android:id="@+id/Find" android:layout_width="wrap_content"
+						android:layout_height="wrap_content"
+						android:layout_alignParentBottom="true"
+						android:layout_alignParentRight="true" android:background="@drawable/find" />
+				</LinearLayout>
+			</RelativeLayout>
+
+			<ScrollView android:id="@+id/MainLyrics"
+				android:layout_width="fill_parent" android:layout_height="fill_parent"
+				android:visibility="gone">
+				<TextView android:text="Loading lyrics" android:id="@+id/LyricsContent"
+					android:layout_width="fill_parent" android:layout_height="fill_parent"
+					android:gravity="center" android:singleLine="false" />
+			</ScrollView>
+
+			<ListView android:id="@+id/MainLyricsWithTimeline"
+				android:layout_width="fill_parent" android:layout_height="fill_parent"
+				android:visibility="gone" />
+		</RelativeLayout>
+
+		<LinearLayout android:id="@+id/Bottom"
+			android:orientation="vertical" android:layout_width="fill_parent"
+			android:layout_height="wrap_content"
+			android:layout_alignParentBottom="true">
+
+			<LinearLayout android:id="@+id/LinearLayout01"
+				android:layout_width="fill_parent" android:layout_height="wrap_content"
+				android:gravity="center">
+				<FrameLayout android:layout_width="0dip"
+					android:layout_height="wrap_content" android:layout_weight="1">
+					<Button android:id="@+id/Prev" android:layout_width="wrap_content"
+						android:layout_height="wrap_content" android:background="@drawable/prev"
+						android:layout_gravity="center" />
+				</FrameLayout>
+				<FrameLayout android:layout_width="0dip"
+					android:layout_height="wrap_content" android:layout_weight="1">
+					<Button android:id="@+id/Stop" android:layout_width="wrap_content"
+						android:layout_height="wrap_content" android:background="@drawable/stop"
+						android:layout_gravity="center" />
+				</FrameLayout>
+				<FrameLayout android:id="@+id/FramePlay"
+					android:layout_width="0dip" android:layout_height="wrap_content"
+					android:layout_weight="1">
+					<Button android:id="@+id/Play" android:layout_width="wrap_content"
+						android:layout_height="wrap_content" android:background="@drawable/play"
+						android:layout_gravity="center" />
+				</FrameLayout>
+				<FrameLayout android:id="@+id/FramePause"
+					android:layout_width="0dip" android:layout_height="wrap_content"
+					android:layout_weight="1" android:visibility="gone">
+					<Button android:id="@+id/Pause" android:layout_width="wrap_content"
+						android:layout_height="wrap_content" android:background="@drawable/pause"
+						android:layout_gravity="center" />
+				</FrameLayout>
+				<FrameLayout android:layout_width="0dip"
+					android:layout_height="wrap_content" android:layout_weight="1">
+					<Button android:id="@+id/Next" android:layout_width="wrap_content"
+						android:layout_height="wrap_content" android:background="@drawable/next"
+						android:layout_gravity="center" />
+				</FrameLayout>
+			</LinearLayout>
+		</LinearLayout>
+	</RelativeLayout>
+</FrameLayout>

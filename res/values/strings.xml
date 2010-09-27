@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="app_name">Lyrics</string>
+	<string name="ERROR_CANNOT_BIND_MEDIASERIVCE">can\'t bind media service</string>
+	<string name="ERROR_MEDIA_REMOTE_EXCEPTION">error while communicate with media service</string>
+	<string name="ERROR_MEDIA_NOT_READY">media not ready</string>
+	<string name="NOT_PLAYING">Not playing</string>
+	<string name="LYRICS_NOT_FOUND">lyrics not found</string>
+	<string name="LYRICS_SERVER_ERROR">lyrics server error</string>
+	<string name="SONG_ARTIST">song artist</string>
+	<string name="SONG_ALBUM">song album</string>
+	<string name="SONG_TRACK">song track</string>
+</resources>

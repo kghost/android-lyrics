@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:id="@+id/RelativeLayout01" android:layout_width="fill_parent"
+	android:layout_height="wrap_content">
+	<RelativeLayout android:id="@+id/TimelineBar"
+		android:layout_width="wrap_content" android:layout_height="wrap_content"
+		android:orientation="vertical" android:layout_alignTop="@+id/TimelineText"
+		android:layout_alignBottom="@+id/TimelineText" android:visibility="gone">
+		<ImageView android:id="@+id/TimelineBarTop"
+			android:layout_width="wrap_content" android:layout_height="wrap_content"
+			android:src="@drawable/bar_top" android:layout_alignParentLeft="true" />
+		<ImageView android:id="@+id/TimelineBarMiddle"
+			android:layout_width="wrap_content" android:layout_height="wrap_content"
+			android:scaleType="fitXY" android:src="@drawable/bar_middle"
+			android:layout_toLeftOf="@+id/TimelineBarBottom"
+			android:layout_toRightOf="@+id/TimelineBarTop" />
+		<ImageView android:id="@+id/TimelineBarBottom"
+			android:layout_width="wrap_content" android:layout_height="wrap_content"
+			android:src="@drawable/bar_bottom" android:layout_alignParentRight="true" />
+	</RelativeLayout>
+	<TextView android:id="@+id/TimelineText" android:layout_width="fill_parent"
+		android:layout_height="wrap_content" android:gravity="center" />
+</RelativeLayout>
