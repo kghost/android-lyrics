@@ -12,8 +12,8 @@ object QianQianService extends LyricsService {
     try {
       method.setPath("/dll/lyricsvr.dll?sh")
       method.setQueryString(Array(
-        new NameValuePair("Artist", encodeUTF16Hex(canonicalization(info.artist.toLowerCase))),
-        new NameValuePair("Title", encodeUTF16Hex(canonicalization(info.track.toLowerCase))),
+        new NameValuePair("Artist", encodeUTF16Hex(canonicalization(info.artist).toString)),
+        new NameValuePair("Title", encodeUTF16Hex(canonicalization(info.track).toString)),
         new NameValuePair("Flags", "0")))
 
       if (client.executeMethod(method) != HttpStatus.SC_OK) {
@@ -30,7 +30,11 @@ object QianQianService extends LyricsService {
     }
   }
 
-  private def canonicalization(s: String): String = """\s\s*""".r.replaceAllIn(s, "")
+  private object canonicalization extends Canonicalization
+    with TrimAllSpace
+    with ToLowerCase
+    with HalfWidthKatakanaToFullWidth
+    with FullWidthAsciiToHalfWidth
 
   private def encodeUTF16Hex(s: String): String = {
     val pre = Array('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F')
