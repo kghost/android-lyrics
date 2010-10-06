@@ -1,1 +1,7 @@
-signkey.keystore
+/signkey.keystore
+/.classpath
+/.project
+/.scala_dependencies
+/.settings/
+/seed.txt
+/target/

@@ -1,12 +1,15 @@
 package name.kghost.android.lyrics.utils
 
-import android.content.Context
+import android.content.{ Context, DialogInterface }
 import android.app.ProgressDialog
 import android.os.AsyncTask
 
 abstract class AsyncTaskWithProgress[A, Result](context: Context, text: String) extends AsyncTask[AnyRef, A, Result] { task =>
-  private val dialog = new ProgressDialog(context) {
-    override protected def onStop = task.cancel(true);
+  private val listener = new DialogInterface.OnCancelListener {
+    override def onCancel(dialog: DialogInterface): Unit = task.cancel(true)
+  }
+  private val dialog = With(new ProgressDialog(context)) {
+    _.setOnCancelListener(listener)
   }
 
   override protected[utils] def onPreExecute(): Unit = {
