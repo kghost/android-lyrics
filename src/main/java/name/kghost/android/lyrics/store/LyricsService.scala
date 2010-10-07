@@ -5,6 +5,3 @@ abstract class LyricsService {
   def find(info: LyricsSearchInfo): Seq[LyricsResultInfo]
 }
 
-object LyricsService {
-  def find(info: LyricsSearchInfo): Seq[LyricsResultInfo] = QianQianService.find(info)
-}

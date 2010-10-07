@@ -1,11 +1,12 @@
 package name.kghost.android.lyrics.store
 
+import name.kghost.android.lyrics.R
 import scala.xml.{ Elem, Text, XML }
 import java.io.{ InputStream, InputStreamReader, IOException }
 import org.apache.commons.httpclient.methods.GetMethod
 import org.apache.commons.httpclient.{ HttpStatus, HttpException, HttpClient, NameValuePair }
 
-object QianQianService extends LyricsService {
+class QianQianService extends LyricsService {
   def find(info: LyricsSearchInfo): Seq[LyricsResultInfo] = {
     val client = new HttpClient()
     val method = new GetMethod("http://ttlrcct2.qianqian.com")
@@ -109,6 +110,8 @@ object QianQianService extends LyricsService {
   }
 
   private case class LyricsResult(id: String, artist: String, album: String, track: String) extends LyricsResultInfo {
+    override def provider = R.drawable.provider_qianqian
+    override def hasTimeline = true
     def getResult: ILyrics = {
       val client = new HttpClient()
       val method = new GetMethod("http://ttlrcct2.qianqian.com")

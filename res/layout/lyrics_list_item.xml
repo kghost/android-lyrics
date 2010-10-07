@@ -1,14 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-	android:id="@+id/Header" android:orientation="vertical"
+
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
 	android:layout_width="fill_parent" android:layout_height="wrap_content">
-	<TextView android:text="Unknown" android:id="@+id/Artist"
+	<LinearLayout android:id="@+id/Indicators"
 		android:layout_width="fill_parent" android:layout_height="wrap_content"
-		android:gravity="center" />
-	<TextView android:text="Unknown" android:id="@+id/Album"
-		android:layout_width="fill_parent" android:layout_height="wrap_content"
-		android:gravity="center" />
-	<TextView android:text="Unknown" android:id="@+id/Track"
-		android:layout_width="fill_parent" android:layout_height="wrap_content"
-		android:gravity="center" />
-</LinearLayout>
+		android:gravity="right" android:layout_alignParentTop="true" />
+
+	<LinearLayout android:orientation="vertical"
+		android:layout_width="fill_parent" android:layout_height="wrap_content">
+		<TextView android:text="Unknown" android:id="@+id/Artist"
+			android:layout_width="fill_parent" android:layout_height="wrap_content"
+			android:gravity="center" />
+		<TextView android:text="Unknown" android:id="@+id/Album"
+			android:layout_width="fill_parent" android:layout_height="wrap_content"
+			android:gravity="center" />
+		<TextView android:text="Unknown" android:id="@+id/Track"
+			android:layout_width="fill_parent" android:layout_height="wrap_content"
+			android:gravity="center" />
+	</LinearLayout>
+</RelativeLayout>

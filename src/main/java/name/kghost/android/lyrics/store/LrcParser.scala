@@ -30,9 +30,9 @@ class LrcParser {
       case rBy(s) =>
         parseRecursive(reader, artist, album, track, lines)
       case x => {
-          Log.i("LyricsParser", "Discard: " + x);
-          parseRecursive(reader, artist, album, track, lines)
-        }
+        Log.i("LyricsParser", "Discard: " + x);
+        parseRecursive(reader, artist, album, track, lines)
+      }
     }
 
   private def parseStream(input: InputStreamReader): (String, String, String, List[(Int, String)]) =
@@ -47,7 +47,8 @@ class LrcParser {
   private def compose(lines: List[(Int, String)]): List[(Int, Int, String)] =
     composeRecursive(lines, Nil, -1)
 
-  def parse(stream: InputStream) =
+  private case class LyricsWithTimeline(artist: String, album: String, track: String, timeline: Seq[(Int, Int, String)]) extends ILyricsWithTimeline
+  def parse(stream: InputStream): ILyricsWithTimeline =
     parseStream(new InputStreamReader(stream, "UTF-8")) match {
       case (artist, album, track, lines) =>
         LyricsWithTimeline(artist, album, track, compose(lines))

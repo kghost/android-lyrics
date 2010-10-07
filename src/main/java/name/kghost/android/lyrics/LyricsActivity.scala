@@ -1,7 +1,7 @@
 package name.kghost.android.lyrics
 
-import android.widget.{ AdapterView, TextView, ListView, BaseAdapter, Button }
-import android.view.{ LayoutInflater, View, ViewGroup, Window }
+import android.widget.{ AdapterView, BaseAdapter, Button, ImageView, ListView, TextView }
+import android.view.{ LayoutInflater, Menu, MenuItem, View, ViewGroup, Window }
 import android.app.{ Activity, Dialog }
 import android.content.{ ComponentName, BroadcastReceiver, Context, DialogInterface, Intent, IntentFilter, ServiceConnection }
 import android.os.{ Bundle, IBinder, RemoteException }
@@ -10,6 +10,7 @@ import com.android.music.IMediaPlaybackService
 import utils.With
 
 class LyricsActivity extends Activity { activity =>
+  private var factory: store.LyricsServiceFactory = new store.LyricsServiceFactory(this)
   private var machine: StateMachine = null
 
   private case class ActivityCreateEvent extends Event
@@ -22,6 +23,9 @@ class LyricsActivity extends Activity { activity =>
 
   private case class MediaServiceEvent(val media: IMediaPlaybackService) extends Event
   private case class MediaServiceNullEvent extends Event
+
+  private case class MenuSaveEvent extends Event
+  private case class MenuDeleteEvent extends Event
 
   private val media_conn = new ServiceConnection() {
     override def onServiceConnected(className: ComponentName, s: IBinder): Unit = {
@@ -265,10 +269,10 @@ class LyricsActivity extends Activity { activity =>
       private var inner: StateMachine = null
       private var inner2: StateMachine = null
 
-      private case class LyricsEvent(val lyrics: store.Lyrics) extends Event
-      private case class TimelineLyricsEvent(val lyrics: store.LyricsWithTimeline) extends Event
+      private case class LyricsEvent(val lyrics: store.ILyrics) extends Event
+      private case class TimelineLyricsEvent(val lyrics: store.ILyricsWithTimeline) extends Event
 
-      private case class SearchEvent(val info: store.LyricsSearchInfo) extends Event
+      private case class SearchEvent(val info: store.LyricsSearchInfo, val service: String) extends Event
       private case class SearchCustomEvent(val info: store.LyricsSearchInfo) extends Event
       private case class SearchCandidateEvent(val info: Seq[store.LyricsResultInfo]) extends Event
       private case class SearchResultEvent(val lyrics: store.LyricsResultInfo) extends Event
@@ -277,6 +281,8 @@ class LyricsActivity extends Activity { activity =>
       override def entry: Unit = {
         inner = new StateMachine(new NoLyricsState)
         inner2 = new StateMachine(new SearchIdleState)
+
+        inner2.dispatch(SearchEvent(info, "local"))
       }
       override def exit: Unit = {
         inner2.finish
@@ -295,12 +301,12 @@ class LyricsActivity extends Activity { activity =>
         case e => inner.dispatch(e); None
       }
 
-      private def search: Unit = inner2.dispatch(SearchEvent(info))
+      private def search: Unit = inner2.dispatch(SearchEvent(info, "qianqian"))
       private def customSearch: Unit = inner2.dispatch(SearchCustomEvent(info))
 
       private class SearchIdleState extends State {
         override def action(ev: Event): Option[State] = ev match {
-          case e: SearchEvent => Some(new SearchingState(e.info))
+          case e: SearchEvent => Some(new SearchingState(e.info, e.service))
           case e: SearchCustomEvent => Some(new SearchCustomState(e.info))
           case e => super.action(e)
         }
@@ -318,7 +324,7 @@ class LyricsActivity extends Activity { activity =>
 
           dialog.findViewById(R.id.OK).asInstanceOf[Button].setOnClickListener(new View.OnClickListener {
             override def onClick(view: View): Unit =
-              inner2.dispatch(SearchEvent(store.LyricsSearchInfo(artist.getText.toString, album.getText.toString, track.getText.toString)))
+              inner2.dispatch(SearchEvent(store.LyricsSearchInfo(artist.getText.toString, album.getText.toString, track.getText.toString), "qianqian"))
           })
 
           dialog.findViewById(R.id.Cancel).asInstanceOf[Button].setOnClickListener(new View.OnClickListener {
@@ -335,16 +341,17 @@ class LyricsActivity extends Activity { activity =>
         override def exit: Unit = dialog.dismiss
         override def action(ev: Event): Option[State] = ev match {
           case e: SearchDoneEvent => Some(new SearchIdleState)
-          case e: SearchEvent => Some(new SearchingState(e.info))
+          case e: SearchEvent => Some(new SearchingState(e.info, e.service))
           case e => super.action(e)
         }
       }
 
-      private class SearchingState(info: store.LyricsSearchInfo) extends State {
+      private class SearchingState(info: store.LyricsSearchInfo, service: String) extends State {
         private var task: utils.AsyncTaskWithProgress[Integer, Seq[store.LyricsResultInfo]] = null
         override def entry: Unit =
           task = With(new utils.AsyncTaskWithProgress[Integer, Seq[store.LyricsResultInfo]](activity, "Finding lyrics") {
-            override def doInBackground(infos: AnyRef*): Seq[store.LyricsResultInfo] = store.LyricsService.find(infos(0).asInstanceOf[store.LyricsSearchInfo])
+            override def doInBackground(infos: AnyRef*): Seq[store.LyricsResultInfo] =
+              factory.create(service).find(infos(0).asInstanceOf[store.LyricsSearchInfo])
             override def onPostExecute(result: Seq[store.LyricsResultInfo]): Unit = {
               super.onPostExecute(result)
               inner2.dispatch(SearchCandidateEvent(result))
@@ -385,9 +392,14 @@ class LyricsActivity extends Activity { activity =>
                   inflater.inflate(R.layout.lyrics_list_item, null)
                 else
                   convertView) { view =>
-                  view.findViewById(R.id.Artist).asInstanceOf[TextView].setText(getItem(position).artist)
-                  view.findViewById(R.id.Album).asInstanceOf[TextView].setText(getItem(position).album)
-                  view.findViewById(R.id.Track).asInstanceOf[TextView].setText(getItem(position).track)
+                  val item = getItem(position)
+                  view.findViewById(R.id.Artist).asInstanceOf[TextView].setText(item.artist)
+                  view.findViewById(R.id.Album).asInstanceOf[TextView].setText(item.album)
+                  view.findViewById(R.id.Track).asInstanceOf[TextView].setText(item.track)
+                  val indicators: ViewGroup = view.findViewById(R.id.Indicators).asInstanceOf[ViewGroup]
+                  indicators.removeAllViews
+                  indicators.addView(Utils.ImageView(activity, item.provider))
+                  if (item.hasTimeline) indicators.addView(Utils.ImageView(activity, R.drawable.clock))
                 }
             })
 
@@ -433,11 +445,11 @@ class LyricsActivity extends Activity { activity =>
                 case (r, e) =>
                   if (e != null) Toast.makeText(activity, e.getMessage, Toast.LENGTH_LONG).show()
                   r match {
-                    case l: store.LyricsWithTimeline => {
+                    case l: store.ILyricsWithTimeline => {
                       machine.dispatch(TimelineLyricsEvent(l))
                       inner2.dispatch(SearchDoneEvent())
                     }
-                    case l: store.Lyrics => {
+                    case l: store.ILyrics => {
                       machine.dispatch(LyricsEvent(l))
                       inner2.dispatch(SearchDoneEvent())
                     }
@@ -498,6 +510,9 @@ class LyricsActivity extends Activity { activity =>
               }
           })
           listview.setLongClickable(true)
+          media_service_wrapper {
+            if (media.isPlaying) timelineAdapter.start(media.position.toInt)
+          }
 
           main.addView(v)
         }
@@ -507,6 +522,24 @@ class LyricsActivity extends Activity { activity =>
           timelineAdapter = null
         }
         override def action(ev: Event): Option[State] = ev match {
+          case e: MenuSaveEvent => {
+            try {
+              factory.local.saveLyricsWithTimeline(info, lyrics)
+              Toast.makeText(activity, "Lyrics Saved", Toast.LENGTH_SHORT).show()
+            } catch {
+              case ex: Exception => Toast.makeText(activity, ex.getLocalizedMessage, Toast.LENGTH_LONG).show()
+            }
+            None
+          }
+          case e: MenuDeleteEvent => {
+            try {
+              factory.local.deleteLyrics(lyrics)
+              Toast.makeText(activity, "Lyrics deleted", Toast.LENGTH_SHORT).show()
+            } catch {
+              case ex: Exception => Toast.makeText(activity, ex.getLocalizedMessage, Toast.LENGTH_LONG).show()
+            }
+            None
+          }
           case e: TimelineLyricsEvent => Some(new TimelineLyricsState(e.lyrics))
           case e: MusicPauseEvent => timelineAdapter.stop; None
           case e: MusicResumeEvent =>
@@ -570,4 +603,16 @@ class LyricsActivity extends Activity { activity =>
   }
 
   override def onSearchRequested: Boolean = { machine.dispatch(ActivitySearchEvent()); false }
+
+  override def onCreateOptionsMenu(menu: Menu): Boolean = {
+    getMenuInflater().inflate(R.menu.main, menu);
+    true;
+  }
+
+  override def onOptionsItemSelected(item: MenuItem): Boolean =
+    item.getItemId() match {
+      case R.id.MenuSave => machine.dispatch(MenuSaveEvent()); true
+      case R.id.MenuDelete => machine.dispatch(MenuDeleteEvent()); true
+      case _ => super.onOptionsItemSelected(item)
+    }
 }
