@@ -120,7 +120,11 @@ class LyricsTimelineAdapter(list: ListView, activity: Activity, timeline: Seq[(I
       item match {
         case (start, end, _) => {
           val now = time_song
-          if (start <= now && now < end) update
+          if (start <= now && now < end) {
+            // wait until the view is ready
+            handler.removeCallbacks(task)
+            handler.post(task)
+          }
         }
       }
     }
