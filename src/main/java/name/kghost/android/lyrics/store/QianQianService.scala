@@ -125,7 +125,7 @@ class QianQianService extends LyricsService {
           println("Method failed: " + method.getStatusLine())
         }
 
-        (new LrcParser).parse(method.getResponseBodyAsStream)
+        LrcParser.parse(method.getResponseBodyAsStream, this, { (x, y) => x })
       } catch {
         case e: HttpException => { null }
         case e: IOException => { null }
