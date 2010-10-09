@@ -4,4 +4,6 @@
 		android:title="Save lyrics" />
 	<item android:id="@+id/MenuDelete" android:icon="@drawable/delete"
 		android:title="Delete lyrics" />
+	<item android:id="@+id/ChooseProvider" android:icon="@drawable/settings"
+		android:title="Choose provider" />
 </menu>

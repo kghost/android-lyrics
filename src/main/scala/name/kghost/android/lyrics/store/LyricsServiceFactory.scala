@@ -6,10 +6,13 @@ import android.content.Context
 
 class LyricsServiceFactory(context: Context) {
   val local = new LocalStorageService(context)
+  def getAll = LyricsServiceFactory.hash
   def get(name: String): LyricsService = if (name == local.name)
     local
-  else
+  else if (LyricsServiceFactory.hash.contains(name))
     LyricsServiceFactory.hash(name)
+  else
+    null
 }
 
 object LyricsServiceFactory {

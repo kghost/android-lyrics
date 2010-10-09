@@ -3,11 +3,15 @@
 	android:layout_width="280dp" android:layout_height="wrap_content"
 	android:padding="10dp" android:orientation="vertical">
 	<EditText android:id="@+id/ArtistInput" android:layout_width="fill_parent"
-		android:layout_height="wrap_content" android:hint="@string/SONG_ARTIST" />
+		android:layout_height="wrap_content" android:hint="@string/SONG_ARTIST"
+		android:singleLine="true" />
 	<EditText android:id="@+id/AlbumInput" android:layout_width="fill_parent"
-		android:layout_height="wrap_content" android:hint="@string/SONG_ALBUM" />
+		android:layout_height="wrap_content" android:hint="@string/SONG_ALBUM"
+		android:singleLine="true" />
 	<EditText android:id="@+id/TrackInput" android:layout_width="fill_parent"
-		android:layout_height="wrap_content" android:hint="@string/SONG_TRACK" />
+		android:layout_height="wrap_content" android:hint="@string/SONG_TRACK"
+		android:singleLine="true" />
+	<include layout="@layout/provider_list_item" />
 	<LinearLayout android:layout_width="fill_parent"
 		android:layout_height="wrap_content">
 		<Button android:text="OK" android:id="@+id/OK"

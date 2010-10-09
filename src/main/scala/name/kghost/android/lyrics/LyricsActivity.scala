@@ -27,6 +27,8 @@ class LyricsActivity extends Activity { activity =>
   private case class MenuSaveEvent extends Event
   private case class MenuDeleteEvent extends Event
 
+  private def defaultProvider = factory.get(getSharedPreferences(LyricsActivity.PREFS_NAME, 0).getString(LyricsActivity.PREFS_DEFAULT_PROVIDER, ""))
+
   private val media_conn = new ServiceConnection() {
     override def onServiceConnected(className: ComponentName, s: IBinder): Unit = {
       machine.dispatch(MediaServiceEvent(IMediaPlaybackService.Stub.asInterface(s)))
@@ -272,7 +274,7 @@ class LyricsActivity extends Activity { activity =>
       private case class LyricsEvent(val lyrics: store.ILyrics) extends Event
       private case class TimelineLyricsEvent(val lyrics: store.ILyricsWithTimeline) extends Event
 
-      private case class SearchEvent(val info: store.LyricsSearchInfo, val service: String) extends Event
+      private case class SearchEvent(val info: store.LyricsSearchInfo, val service: store.LyricsService) extends Event
       private case class SearchCustomEvent(val info: store.LyricsSearchInfo) extends Event
       private case class SearchCandidateEvent(val info: Seq[store.LyricsResultInfo]) extends Event
       private case class SearchResultEvent(val lyrics: store.LyricsResultInfo) extends Event
@@ -282,7 +284,7 @@ class LyricsActivity extends Activity { activity =>
         inner = new StateMachine(new NoLyricsState)
         inner2 = new StateMachine(new SearchIdleState)
 
-        inner2.dispatch(SearchEvent(info, "Local"))
+        inner2.dispatch(SearchEvent(info, factory.local))
       }
       override def exit: Unit = {
         inner2.finish
@@ -301,8 +303,15 @@ class LyricsActivity extends Activity { activity =>
         case e => inner.dispatch(e); None
       }
 
-      private def search: Unit = inner2.dispatch(SearchEvent(info, "QianQian"))
-      private def customSearch: Unit = inner2.dispatch(SearchCustomEvent(info))
+      private def search: Unit = if (defaultProvider != null)
+        inner2.dispatch(SearchEvent(info, defaultProvider))
+      else
+        chooseProvider
+
+      private def customSearch: Unit = if (defaultProvider != null)
+        inner2.dispatch(SearchCustomEvent(info))
+      else
+        chooseProvider
 
       private class SearchIdleState extends State {
         override def action(ev: Event): Option[State] = ev match {
@@ -314,6 +323,7 @@ class LyricsActivity extends Activity { activity =>
 
       private class SearchCustomState(info: store.LyricsSearchInfo) extends State {
         private var dialog: Dialog = null
+        private var provider = defaultProvider
         override def entry: Unit = {
           dialog = new Dialog(activity)
           dialog.setTitle("Custom Search")
@@ -323,13 +333,28 @@ class LyricsActivity extends Activity { activity =>
           dialog.findViewById(R.id.TrackInput).asInstanceOf[TextView].setText(info.track)
 
           dialog.findViewById(R.id.OK).asInstanceOf[Button].setOnClickListener(new View.OnClickListener {
-            override def onClick(view: View): Unit =
-              inner2.dispatch(SearchEvent(store.LyricsSearchInfo(artist.getText.toString, album.getText.toString, track.getText.toString), "QianQian"))
+            override def onClick(view: View): Unit = if (provider != null)
+              inner2.dispatch(SearchEvent(store.LyricsSearchInfo(artist.getText.toString, album.getText.toString, track.getText.toString), provider))
+            else
+              Toast.makeText(activity, "Please select provider", Toast.LENGTH_LONG).show
           })
 
           dialog.findViewById(R.id.Cancel).asInstanceOf[Button].setOnClickListener(new View.OnClickListener {
             override def onClick(view: View): Unit = dialog.cancel
           })
+
+          With(dialog.findViewById(R.id.Provider)) { v =>
+            ProviderChooser.buildView(activity, v, provider, true)
+            v.setOnClickListener(new View.OnClickListener {
+              override def onClick(v: View): Unit =
+                (new ProviderChooser(activity, factory, defaultProvider) {
+                  override def onChoosen(choosen: store.LyricsService): Unit = {
+                    provider = choosen
+                    ProviderChooser.buildView(activity, v, provider, true)
+                  }
+                }).show
+            })
+          }
 
           dialog.setOnCancelListener(new DialogInterface.OnCancelListener {
             override def onCancel(dialog: DialogInterface): Unit = inner2.dispatch(SearchDoneEvent())
@@ -346,22 +371,25 @@ class LyricsActivity extends Activity { activity =>
         }
       }
 
-      private class SearchingState(info: store.LyricsSearchInfo, service: String) extends State {
+      private class SearchingState(info: store.LyricsSearchInfo, srv: store.LyricsService) extends State {
         private var task: utils.AsyncTaskWithProgress[Integer, Seq[store.LyricsResultInfo]] = null
         override def entry: Unit =
-          task = With(new utils.AsyncTaskWithProgress[Integer, Seq[store.LyricsResultInfo]](activity, "Finding lyrics") {
-            override def doInBackground(infos: AnyRef*): Seq[store.LyricsResultInfo] =
-              factory.get(service).find(infos(0).asInstanceOf[store.LyricsSearchInfo])
-            override def onPostExecute(result: Seq[store.LyricsResultInfo]): Unit = {
-              super.onPostExecute(result)
-              inner2.dispatch(SearchCandidateEvent(result))
-            }
-            override def onCancelled: Unit = {
-              super.onCancelled
-              inner2.dispatch(SearchDoneEvent())
-            }
-          }) { _.execute(info) }
-        override def exit: Unit = task.cancel(true)
+          if (srv != null) {
+            task = With(new utils.AsyncTaskWithProgress[Integer, Seq[store.LyricsResultInfo]](activity, "Finding lyrics") {
+              override def doInBackground(infos: AnyRef*): Seq[store.LyricsResultInfo] =
+                srv.find(infos(0).asInstanceOf[store.LyricsSearchInfo])
+              override def onPostExecute(result: Seq[store.LyricsResultInfo]): Unit = {
+                super.onPostExecute(result)
+                inner2.dispatch(SearchCandidateEvent(result))
+              }
+              override def onCancelled: Unit = {
+                super.onCancelled
+                inner2.dispatch(SearchDoneEvent())
+              }
+            }) { _.execute(info) }
+          } else
+            inner2.dispatch(SearchDoneEvent())
+        override def exit: Unit = if (task != null) task.cancel(true)
         override def action(ev: Event): Option[State] = ev match {
           case e: SearchDoneEvent => Some(new SearchIdleState)
           case e: SearchCandidateEvent => Some(new SelectCandidateState(e.info))
@@ -613,6 +641,20 @@ class LyricsActivity extends Activity { activity =>
     item.getItemId() match {
       case R.id.MenuSave => machine.dispatch(MenuSaveEvent()); true
       case R.id.MenuDelete => machine.dispatch(MenuDeleteEvent()); true
+      case R.id.ChooseProvider => chooseProvider; true
       case _ => super.onOptionsItemSelected(item)
     }
+
+  private def chooseProvider: Unit = (new ProviderChooser(this, factory, defaultProvider) {
+    override def onChoosen(choosen: store.LyricsService): Unit = {
+      val editor = getSharedPreferences(LyricsActivity.PREFS_NAME, 0).edit
+      editor.putString(LyricsActivity.PREFS_DEFAULT_PROVIDER, choosen.name)
+      editor.commit()
+    }
+  }).show; true
+}
+
+object LyricsActivity {
+  val PREFS_NAME = "prefs"
+  val PREFS_DEFAULT_PROVIDER = "DefaultProvider"
 }
