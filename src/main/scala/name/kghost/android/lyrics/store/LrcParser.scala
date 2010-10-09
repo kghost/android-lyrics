@@ -11,28 +11,32 @@ object LrcParser {
   private val rBy = """^\s*\[by:(.*)\]\s*$""".r
   private val rTimeline = """^\[(\d\d+):(\d\d).(\d\d)\](.*)$""".r
 
-  private def parseRecursive(reader: BufferedReader, infoCombiner: (String, String) => String, artist: String, album: String, track: String,
-    lines: List[(Int, String)]): (String, String, String, List[(Int, String)]) =
-    reader.readLine match {
-      case null =>
-        (artist, album, track, lines)
+  // it is not tail recursive but on most times it do not repeat
+  private def parseMultiTimeline(s: String, lines: List[(Int, String)]): (String, List[(Int, String)]) = {
+    s match {
       case rTimeline(minites, seconds, milliseconds, line) =>
-        parseRecursive(reader, infoCombiner, artist, album, track, ((minites.toInt * 60
-          + seconds.toInt) * 1000 + milliseconds.toInt, line) :: lines)
-      case rArtist(s) =>
-        parseRecursive(reader, infoCombiner, infoCombiner(artist, s), album, track, lines)
-      case rAlbum(s) =>
-        parseRecursive(reader, infoCombiner, artist, infoCombiner(album, s), track, lines)
-      case rTrack(s) =>
-        parseRecursive(reader, infoCombiner, artist, album, infoCombiner(track, s), lines)
-      case rAuthor(s) =>
-        parseRecursive(reader, infoCombiner, artist, album, track, lines)
-      case rBy(s) =>
-        parseRecursive(reader, infoCombiner, artist, album, track, lines)
-      case x => {
-        Log.i("LyricsParser", "Discard: " + x);
-        parseRecursive(reader, infoCombiner, artist, album, track, lines)
-      }
+        parseMultiTimeline(line, lines) match {
+          case (s, l) => (s, ((minites.toInt * 60 + seconds.toInt) * 1000 + milliseconds.toInt, s) :: l)
+        }
+      case x => (x, lines)
+    }
+  }
+
+  private def parseRecursive(reader: BufferedReader, infoCombiner: (String, String) => String, artist: String,
+    album: String, track: String, lines: List[(Int, String)]): (String, String, String, List[(Int, String)]) =
+    reader.readLine match {
+      case null => (artist, album, track, lines)
+      case rTimeline(minites, seconds, milliseconds, line) =>
+        parseRecursive(reader, infoCombiner, artist, album, track, parseMultiTimeline(line, lines) match {
+          case (s, l) => ((minites.toInt * 60 + seconds.toInt) * 1000 + milliseconds.toInt, s) :: l
+        })
+      case rArtist(s) => parseRecursive(reader, infoCombiner, infoCombiner(artist, s), album, track, lines)
+      case rAlbum(s) => parseRecursive(reader, infoCombiner, artist, infoCombiner(album, s), track, lines)
+      case rTrack(s) => parseRecursive(reader, infoCombiner, artist, album, infoCombiner(track, s), lines)
+      case rAuthor(s) => parseRecursive(reader, infoCombiner, artist, album, track, lines)
+      case rBy(s) => parseRecursive(reader, infoCombiner, artist, album, track, lines)
+      case x => parseRecursive(reader, infoCombiner, artist, album, track, lines)
+
     }
 
   private def parseStream(input: InputStreamReader, info: LyricsResultInfo, infoCombiner: (String, String) => String): (String, String, String, List[(Int, String)]) =
@@ -51,7 +55,7 @@ object LrcParser {
   def parse(stream: InputStream, info: LyricsResultInfo, infoCombiner: (String, String) => String): ILyricsWithTimeline =
     parseStream(new InputStreamReader(stream, "UTF-8"), info, infoCombiner) match {
       case (artist, album, track, lines) =>
-        LyricsWithTimeline(artist, album, track, compose(lines))
+        LyricsWithTimeline(artist, album, track, compose(lines.sort { (e1, e2) => e1._1 > e2._1 }))
       case null => null
     }
 }

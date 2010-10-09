@@ -4,7 +4,7 @@ import java.nio.CharBuffer
 import name.kghost.android.lyrics.utils.With
 
 private object Canonicalization {
-  implicit def map(s: CharSequence, f: (Char) => Char): CharSequence = With(CharBuffer.allocate(s.length)) { cb =>
+  def map(s: CharSequence, f: (Char) => Char): CharSequence = With(CharBuffer.allocate(s.length)) { cb =>
     for (i <- Range(0, s.length)) cb.put(i, f(s.charAt(i)))
   }
 }
@@ -19,6 +19,10 @@ trait TrimSpace extends Canonicalization {
 
 trait TrimAllSpace extends Canonicalization {
   override def apply(s: CharSequence): CharSequence = super.apply("""\s\s*""".r.replaceAllIn(s, ""))
+}
+
+trait TrimAllMarks extends Canonicalization {
+  override def apply(s: CharSequence): CharSequence = super.apply("""[~`!@#$%\^&*\(\)\-_+=|\\\{\}\[\]:\";\'<>\?,\./]""".r.replaceAllIn(s, ""))
 }
 
 trait TrimDupSpace extends Canonicalization {

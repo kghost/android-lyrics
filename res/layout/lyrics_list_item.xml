@@ -8,13 +8,13 @@
 
 	<LinearLayout android:orientation="vertical"
 		android:layout_width="fill_parent" android:layout_height="wrap_content">
-		<TextView android:text="Unknown" android:id="@+id/Artist"
+		<TextView android:hint="Unknown" android:id="@+id/Artist"
 			android:layout_width="fill_parent" android:layout_height="wrap_content"
 			android:gravity="center" />
-		<TextView android:text="Unknown" android:id="@+id/Album"
+		<TextView android:hint="Unknown" android:id="@+id/Album"
 			android:layout_width="fill_parent" android:layout_height="wrap_content"
 			android:gravity="center" />
-		<TextView android:text="Unknown" android:id="@+id/Track"
+		<TextView android:hint="Unknown" android:id="@+id/Track"
 			android:layout_width="fill_parent" android:layout_height="wrap_content"
 			android:gravity="center" />
 	</LinearLayout>

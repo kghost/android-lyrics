@@ -8,7 +8,7 @@ import scala.collection.Seq
 import name.kghost.android.lyrics.utils.With
 import name.kghost.android.lyrics.R
 
-class LocalStorageService(context: Context) extends LyricsService {
+class LocalStorageService(context: Context) extends LyricsService { srv =>
   private val sql = new SQLiteOpenHelper(context, "lyrics", null, 1) {
     private final val TABLE_CREATE: String =
       """CREATE TABLE "lyrics" ("id" INTEGER NOT NULL, "artist" TEXT NOT NULL ,""" +
@@ -43,7 +43,7 @@ class LocalStorageService(context: Context) extends LyricsService {
       getResult(cursor, new LyricsResultInfo {
         private val typo = cursor.getInt(1)
         private val blob = cursor.getBlob(5)
-        override def provider = R.drawable.provider_local
+        override def provider = srv.provider
         override def hasTimeline = typo == 2
         override val artist = cursor.getString(2)
         override val album = cursor.getString(3)
@@ -58,7 +58,9 @@ class LocalStorageService(context: Context) extends LyricsService {
       list
   }
 
-  def find(info: LyricsSearchInfo): Seq[LyricsResultInfo] =
+  override def provider = R.drawable.provider_local
+  override def name = "Local"
+  override def find(info: LyricsSearchInfo): Seq[LyricsResultInfo] =
     {
       val db = sql.getReadableDatabase
       try {

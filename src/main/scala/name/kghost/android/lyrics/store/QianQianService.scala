@@ -6,8 +6,10 @@ import java.io.{ InputStream, InputStreamReader, IOException }
 import org.apache.commons.httpclient.methods.GetMethod
 import org.apache.commons.httpclient.{ HttpStatus, HttpException, HttpClient, NameValuePair }
 
-class QianQianService extends LyricsService {
-  def find(info: LyricsSearchInfo): Seq[LyricsResultInfo] = {
+class QianQianService extends LyricsService { srv =>
+  override def provider = R.drawable.provider_qianqian
+  override def name = "QianQian"
+  override def find(info: LyricsSearchInfo): Seq[LyricsResultInfo] = {
     val client = new HttpClient()
     val method = new GetMethod("http://ttlrcct2.qianqian.com")
     try {
@@ -17,11 +19,10 @@ class QianQianService extends LyricsService {
         new NameValuePair("Title", encodeUTF16Hex(canonicalization(info.track).toString)),
         new NameValuePair("Flags", "0")))
 
-      if (client.executeMethod(method) != HttpStatus.SC_OK) {
-        System.err.println("Method failed: " + method.getStatusLine())
-      }
-
-      parse(method.getResponseBodyAsStream)
+      if (client.executeMethod(method) == HttpStatus.SC_OK)
+        parse(method.getResponseBodyAsStream)
+      else
+        null
     } catch {
       case ex: HttpException => { null }
       case ex: IOException => { null }
@@ -32,8 +33,9 @@ class QianQianService extends LyricsService {
   }
 
   private object canonicalization extends Canonicalization
-    with TrimAllSpace
     with ToLowerCase
+    with TrimAllSpace
+    with TrimAllMarks
     with HalfWidthKatakanaToFullWidth
     with FullWidthAsciiToHalfWidth
 
@@ -110,7 +112,7 @@ class QianQianService extends LyricsService {
   }
 
   private case class LyricsResult(id: String, artist: String, album: String, track: String) extends LyricsResultInfo {
-    override def provider = R.drawable.provider_qianqian
+    override def provider = srv.provider
     override def hasTimeline = true
     def getResult: ILyrics = {
       val client = new HttpClient()
@@ -121,11 +123,10 @@ class QianQianService extends LyricsService {
           new NameValuePair("Id", id),
           new NameValuePair("Code", code(artist + track, augmentString(id).toInt))))
 
-        if (client.executeMethod(method) != HttpStatus.SC_OK) {
-          println("Method failed: " + method.getStatusLine())
-        }
-
-        LrcParser.parse(method.getResponseBodyAsStream, this, { (x, y) => x })
+        if (client.executeMethod(method) == HttpStatus.SC_OK)
+          LrcParser.parse(method.getResponseBodyAsStream, this, { (x, y) => x })
+        else
+          null
       } catch {
         case e: HttpException => { null }
         case e: IOException => { null }
@@ -140,7 +141,7 @@ class QianQianService extends LyricsService {
     XML.load(new InputStreamReader(response, "UTF-8")) match {
       case <result>{ lrcs@_* }</result> =>
         for (lyrics@ <lrc/> <- lrcs)
-          yield new LyricsResult((lyrics \ "@id").text, (lyrics \ "@artist").text, "Unknown album", (lyrics \ "@title").text)
+          yield new LyricsResult((lyrics \ "@id").text, (lyrics \ "@artist").text, "", (lyrics \ "@title").text)
     }
   }
 }

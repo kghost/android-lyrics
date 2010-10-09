@@ -282,7 +282,7 @@ class LyricsActivity extends Activity { activity =>
         inner = new StateMachine(new NoLyricsState)
         inner2 = new StateMachine(new SearchIdleState)
 
-        inner2.dispatch(SearchEvent(info, "local"))
+        inner2.dispatch(SearchEvent(info, "Local"))
       }
       override def exit: Unit = {
         inner2.finish
@@ -301,7 +301,7 @@ class LyricsActivity extends Activity { activity =>
         case e => inner.dispatch(e); None
       }
 
-      private def search: Unit = inner2.dispatch(SearchEvent(info, "qianqian"))
+      private def search: Unit = inner2.dispatch(SearchEvent(info, "QianQian"))
       private def customSearch: Unit = inner2.dispatch(SearchCustomEvent(info))
 
       private class SearchIdleState extends State {
@@ -324,7 +324,7 @@ class LyricsActivity extends Activity { activity =>
 
           dialog.findViewById(R.id.OK).asInstanceOf[Button].setOnClickListener(new View.OnClickListener {
             override def onClick(view: View): Unit =
-              inner2.dispatch(SearchEvent(store.LyricsSearchInfo(artist.getText.toString, album.getText.toString, track.getText.toString), "qianqian"))
+              inner2.dispatch(SearchEvent(store.LyricsSearchInfo(artist.getText.toString, album.getText.toString, track.getText.toString), "QianQian"))
           })
 
           dialog.findViewById(R.id.Cancel).asInstanceOf[Button].setOnClickListener(new View.OnClickListener {
@@ -351,7 +351,7 @@ class LyricsActivity extends Activity { activity =>
         override def entry: Unit =
           task = With(new utils.AsyncTaskWithProgress[Integer, Seq[store.LyricsResultInfo]](activity, "Finding lyrics") {
             override def doInBackground(infos: AnyRef*): Seq[store.LyricsResultInfo] =
-              factory.create(service).find(infos(0).asInstanceOf[store.LyricsSearchInfo])
+              factory.get(service).find(infos(0).asInstanceOf[store.LyricsSearchInfo])
             override def onPostExecute(result: Seq[store.LyricsResultInfo]): Unit = {
               super.onPostExecute(result)
               inner2.dispatch(SearchCandidateEvent(result))
