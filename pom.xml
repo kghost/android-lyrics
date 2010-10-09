@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>name.kghost.android.lyrics</groupId>
 	<artifactId>lyrics</artifactId>
-	<version>0.1.1-SNAPSHOT</version>
+	<version>0.2.0</version>
 	<packaging>apk</packaging>
 	<name>lyrics</name>
 
