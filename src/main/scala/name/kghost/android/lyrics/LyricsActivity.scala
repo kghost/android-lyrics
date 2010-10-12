@@ -521,12 +521,11 @@ class LyricsActivity extends Activity { activity =>
 
       private class TimelineLyricsState(private val lyrics: store.ILyricsWithTimeline) extends State {
         private var timelineAdapter: LyricsTimelineAdapter = null
-        private val v = inflater.inflate(R.layout.main_lyrics_timeline, null)
+        private val v = inflater.inflate(R.layout.main_lyrics_timeline, null).asInstanceOf[ListView]
         override def entry: Unit = {
-          val listview = v.asInstanceOf[ListView]
-          timelineAdapter = new LyricsTimelineAdapter(listview, activity, lyrics.timeline)
-          listview.setAdapter(timelineAdapter)
-          listview.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+          timelineAdapter = new LyricsTimelineAdapter(v, inflater, lyrics.timeline)
+          v.setAdapter(timelineAdapter)
+          v.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
             override def onItemLongClick(parentView: AdapterView[_], childView: View, position: Int, id: Long): Boolean =
               With(true) { x =>
                 val start = lyrics.timeline(position)._1
@@ -537,7 +536,7 @@ class LyricsActivity extends Activity { activity =>
                 }
               }
           })
-          listview.setLongClickable(true)
+          v.setLongClickable(true)
           media_service_wrapper {
             if (media.isPlaying) timelineAdapter.start(media.position.toInt)
           }

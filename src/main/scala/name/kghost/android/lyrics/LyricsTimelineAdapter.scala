@@ -1,67 +1,62 @@
 package name.kghost.android.lyrics
 
+import android.graphics.Color
 import java.util.Date
 import scala.collection.mutable.HashMap
 import android.widget.{ TextView, ListView, BaseAdapter }
 import android.view.{ LayoutInflater, View, ViewGroup, Window }
-import android.view.animation.{ Animation, AnimationUtils }
-import android.app.Activity
 import android.os.Handler
 import android.util.Log
 import utils.With
 
-class LyricsTimelineAdapter(list: ListView, activity: Activity, timeline: Seq[(Int, Int, String)])
+class LyricsTimelineAdapter(list: ListView, inflater: LayoutInflater, timeline: Seq[(Int, Int, String)])
   extends BaseAdapter { adapter =>
-  val mInflater = LayoutInflater.from(activity)
-
   private var is_start: Boolean = false
   private var time_song_start: Int = 0
   private var time_real_start: Long = 0
   private def time_song = (new Date().getTime - time_real_start + time_song_start).toInt
-  private val showed = new HashMap[Int, Animation]
+  private val showed = new HashMap[Int, Runnable]
 
   private val handler: Handler = new Handler
   private val task = new Runnable {
     override def run: Unit = adapter.update
   }
 
+  private abstract class RunOnce extends Runnable {
+    private var done = false
+    def once: Boolean
+    override def run: Unit = if (!done) done = once
+  }
+
   def start(time: Int): Unit = {
     time_song_start = time
     time_real_start = new Date().getTime
-    for ((x, y) <- showed) {
-      y.cancel
-    }
+    for ((x, y) <- showed) y.run
     is_start = true
     update
   }
 
   def stop: Unit = {
-    for ((x, y) <- showed) {
-      y.cancel
-    }
+    for ((x, y) <- showed) y.run
     handler.removeCallbacks(task)
     is_start = false
   }
 
   private def show(index: Int, dur: Int): Unit = getViewAt(index) match {
-    case view: View => {
-      val animation = AnimationUtils.loadAnimation(activity, R.anim.timeline_bar)
-      animation.setDuration(dur)
-      animation.setAnimationListener(new Animation.AnimationListener {
-        override def onAnimationRepeat(animation: Animation): Unit = assert(false)
-        override def onAnimationStart(animation: Animation): Unit = {
-          view.setVisibility(View.VISIBLE)
-          assert(!showed.contains(index))
-          showed += ((index, animation))
+    case view: TextView => {
+        val color = view.getTextColors()
+        val r = new RunOnce {
+          override def once: Boolean = With(true) { x =>
+            showed -= ((index))
+            view.setTextColor(color)
+            view.setTag(null)
+          }
         }
-        override def onAnimationEnd(animation: Animation): Unit = {
-          assert(showed.contains(index))
-          showed -= ((index))
-          view.setVisibility(View.GONE)
-        }
-      })
-      view.startAnimation(animation)
-    }
+        showed += ((index, r))
+        view.setTextColor(Color.GREEN)
+        view.setTag(r)
+        view.postDelayed(r, dur)
+      }
     case null => Unit
   }
 
@@ -70,17 +65,17 @@ class LyricsTimelineAdapter(list: ListView, activity: Activity, timeline: Seq[(I
     val now = time_song
     find(now) match {
       case (nearest, showing) => {
-        Log.d("LyricsAnimation", now.toString + '|' + nearest.toString + '|' + showing.toString)
-        showing foreach {
-          case (index, dur) => if (!showed.contains(index)) show(index, dur)
-        }
-        nearest match {
-          case Some(x) => {
-            handler.postDelayed(task, x - now)
+          Log.d("LyricsAnimation", now.toString + '|' + nearest.toString + '|' + showing.toString)
+          showing foreach {
+            case (index, dur) => if (!showed.contains(index)) show(index, dur)
           }
-          case None => Unit
+          nearest match {
+            case Some(x) => {
+                handler.postDelayed(task, x - now)
+              }
+            case None => Unit
+          }
         }
-      }
     }
   }
 
@@ -111,21 +106,26 @@ class LyricsTimelineAdapter(list: ListView, activity: Activity, timeline: Seq[(I
   override def getItemId(position: Int) = position
   override def getView(position: Int, convertView: View, parent: ViewGroup): View =
     With(if (convertView == null)
-      mInflater.inflate(R.layout.lyrics_line_item, null)
+      inflater.inflate(R.layout.lyrics_line_item, null)
     else {
-      With(convertView) { _.findViewById(R.id.TimelineBar).clearAnimation }
+      With(convertView) {
+        _.getTag() match {
+          case r: RunOnce => r.run
+          case null => Unit
+        }
+      }
     }) { view =>
       var item = getItem(position)
-      view.findViewById(R.id.TimelineText).asInstanceOf[TextView].setText(item._3)
+      view.asInstanceOf[TextView].setText(item._3)
       item match {
         case (start, end, _) => {
-          val now = time_song
-          if (start <= now && now < end) {
-            // wait until the view is ready
-            handler.removeCallbacks(task)
-            handler.post(task)
+            val now = time_song
+            if (start <= now && now < end) {
+              // wait until the view is ready
+              handler.removeCallbacks(task)
+              handler.post(task)
+            }
           }
-        }
       }
     }
   private def getViewAt(position: Int): View = {
@@ -133,6 +133,6 @@ class LyricsTimelineAdapter(list: ListView, activity: Activity, timeline: Seq[(I
     if (p < 0 || p >= list.getChildCount())
       null;
     else
-      list.getChildAt(p).findViewById(R.id.TimelineBar);
+      list.getChildAt(p)
   }
 }
