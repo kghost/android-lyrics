@@ -44,19 +44,22 @@ class LyricsTimelineAdapter(list: ListView, inflater: LayoutInflater, timeline: 
 
   private def show(index: Int, dur: Int): Unit = getViewAt(index) match {
     case view: TextView => {
-        val color = view.getTextColors()
-        val r = new RunOnce {
-          override def once: Boolean = With(true) { x =>
-            showed -= ((index))
-            view.setTextColor(color)
-            view.setTag(null)
-          }
+      val color = view.getTextColors()
+      val hint = view.getHintTextColors()
+      val r = new RunOnce {
+        override def once: Boolean = With(true) { x =>
+          showed -= ((index))
+          view.setTextColor(color)
+          view.setHintTextColor(hint)
+          view.setTag(null)
         }
-        showed += ((index, r))
-        view.setTextColor(Color.GREEN)
-        view.setTag(r)
-        view.postDelayed(r, dur)
       }
+      showed += ((index, r))
+      view.setTextColor(Color.rgb(0, 0xff, 0))
+      view.setHintTextColor(Color.rgb(0x33, 0x99, 0x33))
+      view.setTag(r)
+      view.postDelayed(r, dur)
+    }
     case null => Unit
   }
 
@@ -65,17 +68,17 @@ class LyricsTimelineAdapter(list: ListView, inflater: LayoutInflater, timeline: 
     val now = time_song
     find(now) match {
       case (nearest, showing) => {
-          Log.d("LyricsAnimation", now.toString + '|' + nearest.toString + '|' + showing.toString)
-          showing foreach {
-            case (index, dur) => if (!showed.contains(index)) show(index, dur)
-          }
-          nearest match {
-            case Some(x) => {
-                handler.postDelayed(task, x - now)
-              }
-            case None => Unit
-          }
+        Log.d("LyricsAnimation", now.toString + '|' + nearest.toString + '|' + showing.toString)
+        showing foreach {
+          case (index, dur) => if (!showed.contains(index)) show(index, dur)
         }
+        nearest match {
+          case Some(x) => {
+            handler.postDelayed(task, x - now)
+          }
+          case None => Unit
+        }
+      }
     }
   }
 
@@ -119,13 +122,13 @@ class LyricsTimelineAdapter(list: ListView, inflater: LayoutInflater, timeline: 
       view.asInstanceOf[TextView].setText(item._3)
       item match {
         case (start, end, _) => {
-            val now = time_song
-            if (start <= now && now < end) {
-              // wait until the view is ready
-              handler.removeCallbacks(task)
-              handler.post(task)
-            }
+          val now = time_song
+          if (start <= now && now < end) {
+            // wait until the view is ready
+            handler.removeCallbacks(task)
+            handler.post(task)
           }
+        }
       }
     }
   private def getViewAt(position: Int): View = {
