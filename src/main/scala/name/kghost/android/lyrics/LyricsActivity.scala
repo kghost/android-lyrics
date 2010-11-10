@@ -371,7 +371,7 @@ class LyricsActivity extends Activity { activity =>
         }
       }
 
-      private class SearchingState(info: store.LyricsSearchInfo, srv: store.LyricsService) extends State {
+      private class SearchingState(info: store.LyricsSearchInfo, srv: store.LyricsService) extends State { s =>
         private var task: utils.AsyncTaskWithProgress[Integer, Seq[store.LyricsResultInfo]] = null
         override def entry: Unit =
           if (srv != null) {
@@ -380,11 +380,13 @@ class LyricsActivity extends Activity { activity =>
                 srv.find(infos(0).asInstanceOf[store.LyricsSearchInfo])
               override def onPostExecute(result: Seq[store.LyricsResultInfo]): Unit = {
                 super.onPostExecute(result)
-                inner2.dispatch(SearchCandidateEvent(result))
+                if (s.isActive)
+                  inner2.dispatch(SearchCandidateEvent(result))
               }
               override def onCancelled: Unit = {
                 super.onCancelled
-                inner2.dispatch(SearchDoneEvent())
+                if (s.isActive)
+                  inner2.dispatch(SearchDoneEvent())
               }
             }) { _.execute(info) }
           } else
@@ -457,7 +459,7 @@ class LyricsActivity extends Activity { activity =>
         }
       }
 
-      private class GettingResultState(info: store.LyricsResultInfo) extends State {
+      private class GettingResultState(info: store.LyricsResultInfo) extends State { s =>
         private var task: utils.AsyncTaskWithProgress[Integer, (store.ILyrics, store.LyricsServiceError)] = null
         override def entry: Unit =
           task = With(new utils.AsyncTaskWithProgress[Integer, (store.ILyrics, store.LyricsServiceError)](activity, "Loading lyrics") {
@@ -469,25 +471,27 @@ class LyricsActivity extends Activity { activity =>
               }
             override def onPostExecute(result: (store.ILyrics, store.LyricsServiceError)): Unit = {
               super.onPostExecute(result)
-              result match {
-                case (r, e) =>
-                  if (e != null) Toast.makeText(activity, e.getMessage, Toast.LENGTH_LONG).show()
-                  r match {
-                    case l: store.ILyricsWithTimeline => {
-                      machine.dispatch(TimelineLyricsEvent(l))
-                      inner2.dispatch(SearchDoneEvent())
+              if (s.isActive)
+                result match {
+                  case (r, e) =>
+                    if (e != null) Toast.makeText(activity, e.getMessage, Toast.LENGTH_LONG).show()
+                    r match {
+                      case l: store.ILyricsWithTimeline => {
+                        machine.dispatch(TimelineLyricsEvent(l))
+                        inner2.dispatch(SearchDoneEvent())
+                      }
+                      case l: store.ILyrics => {
+                        machine.dispatch(LyricsEvent(l))
+                        inner2.dispatch(SearchDoneEvent())
+                      }
+                      case null => Toast.makeText(activity, R.string.LYRICS_SERVER_ERROR, Toast.LENGTH_LONG).show()
                     }
-                    case l: store.ILyrics => {
-                      machine.dispatch(LyricsEvent(l))
-                      inner2.dispatch(SearchDoneEvent())
-                    }
-                    case null => Toast.makeText(activity, R.string.LYRICS_SERVER_ERROR, Toast.LENGTH_LONG).show()
-                  }
-              }
+                }
             }
             override def onCancelled: Unit = {
               super.onCancelled
-              inner2.dispatch(SearchDoneEvent())
+              if (s.isActive)
+                inner2.dispatch(SearchDoneEvent())
             }
           }) { _.execute(info) }
         override def exit: Unit = task.cancel(true)

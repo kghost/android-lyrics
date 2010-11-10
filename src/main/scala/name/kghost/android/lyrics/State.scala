@@ -4,8 +4,12 @@ import scala.collection.mutable.Queue
 import android.util.Log
 
 class State {
-  def entry: Unit = {}
-  def exit: Unit = {}
+  private var isActive_ = false
+  final def isActive = isActive_
+  final def internalEntry: Unit = { isActive_ = true; entry }
+  final def internalExit: Unit = { exit; isActive_ = false }
+  protected def entry: Unit = {}
+  protected def exit: Unit = {}
   def action(ev: Event): Option[State] = ev match {
     case Event(name) => Log.e("LyricsState", "State " + this.getClass.getName + " unknown event " + name); None
   }
@@ -14,7 +18,7 @@ class State {
 class FinalState extends State
 
 class StateMachine(private var state: State) {
-  state.entry
+  state.internalEntry
   private val queue = new Queue[Event]
   private var dispatching = false
   def dispatch(ev: Event): Unit = {
@@ -31,13 +35,13 @@ class StateMachine(private var state: State) {
   }
   private def dispatch2(ev: Event): Unit = state.action(ev) match {
     case Some(n: State) => {
-      state.exit
+      state.internalExit
       state = n
-      state.entry
+      state.internalEntry
     }
     case None => Unit
   }
-  def finish: Unit = state.exit
+  def finish: Unit = state.internalExit
 }
 
 class Event() {
