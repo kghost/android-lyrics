@@ -5,3 +5,4 @@
 /.settings/
 /seed.txt
 /target/
+*.swp
