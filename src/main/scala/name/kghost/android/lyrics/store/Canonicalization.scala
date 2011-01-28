@@ -1,5 +1,6 @@
 package name.kghost.android.lyrics.store
 
+import scala.collection.mutable.LinkedList
 import java.nio.CharBuffer
 import name.kghost.android.lyrics.utils.With
 
@@ -11,6 +12,19 @@ private object Canonicalization {
 
 trait Canonicalization extends Function1[CharSequence, CharSequence] {
   override def apply(s: CharSequence): CharSequence = s
+}
+
+object GlobalCanonicalization extends Canonicalization {
+  private trait Switch { var enable: Boolean }
+  val RemoveBracket extends Switch with RemoveBracket { override var enable = true }
+  private val trans: List[Switch with Canonicalization] = RemoveBracket :: Nil
+  override def apply(s: CharSequence): CharSequence = {
+    var r = s
+    for (i <- trans)
+      if (i.enable)
+        r = i(r)
+    r
+  }
 }
 
 trait TrimSpace extends Canonicalization {
@@ -119,4 +133,8 @@ trait HalfWidthKatakanaToFullWidth extends Canonicalization {
     case 'ﾟ' => '゜'
     case x => x
   }))
+}
+
+trait RemoveBracket extends Canonicalization {
+  override def apply(s: CharSequence): CharSequence = super.apply("""\([^)]*\)""".r.replaceAllIn(s, ""))
 }
