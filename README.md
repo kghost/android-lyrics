@@ -8,5 +8,9 @@ Build apk
 
     mvn install
 
+or put signkey at $(SOURCE_DIR)/signkey.keystore and run
+
+    mvn install -Djarsigner.storepass=KEYPASS
+
 ## Known Issue ##
 
