@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
-	<item android:id="@+id/MenuSave" android:icon="@drawable/add"
+	<item android:id="@+id/MenuSave" android:icon="@android:drawable/ic_menu_add"
 		android:title="Save lyrics" />
-	<item android:id="@+id/MenuDelete" android:icon="@drawable/delete"
+	<item android:id="@+id/MenuDelete" android:icon="@android:drawable/ic_menu_delete"
 		android:title="Delete lyrics" />
-	<item android:id="@+id/ChooseProvider" android:icon="@drawable/settings"
+	<item android:id="@+id/ChooseProvider" android:icon="@android:drawable/ic_menu_preferences"
 		android:title="Choose provider" />
 </menu>

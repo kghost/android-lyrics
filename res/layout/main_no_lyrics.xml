@@ -9,10 +9,10 @@
 		<Button android:id="@+id/CustomFind" android:layout_width="wrap_content"
 			android:layout_height="wrap_content"
 			android:layout_alignParentBottom="true"
-			android:layout_alignParentRight="true" android:background="@drawable/check" />
+			android:layout_alignParentRight="true" android:background="@android:drawable/ic_menu_zoom" />
 		<Button android:id="@+id/Find" android:layout_width="wrap_content"
 			android:layout_height="wrap_content"
 			android:layout_alignParentBottom="true"
-			android:layout_alignParentRight="true" android:background="@drawable/find" />
+			android:layout_alignParentRight="true" android:background="@android:drawable/ic_menu_search" />
 	</LinearLayout>
 </RelativeLayout>
