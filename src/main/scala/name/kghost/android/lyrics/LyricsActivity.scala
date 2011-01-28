@@ -328,13 +328,16 @@ class LyricsActivity extends Activity { activity =>
           dialog = new Dialog(activity)
           dialog.setTitle("Custom Search")
           dialog.setContentView(R.layout.custom_find_dialog)
-          dialog.findViewById(R.id.ArtistInput).asInstanceOf[TextView].setText(info.artist)
-          dialog.findViewById(R.id.AlbumInput).asInstanceOf[TextView].setText(info.album)
-          dialog.findViewById(R.id.TrackInput).asInstanceOf[TextView].setText(info.track)
+          val custom_artist = dialog.findViewById(R.id.ArtistInput).asInstanceOf[TextView]
+          val custom_album = dialog.findViewById(R.id.AlbumInput).asInstanceOf[TextView]
+          val custom_track = dialog.findViewById(R.id.TrackInput).asInstanceOf[TextView]
+          custom_artist.setText(info.artist)
+          custom_album.setText(info.album)
+          custom_track.setText(info.track)
 
           dialog.findViewById(R.id.OK).asInstanceOf[Button].setOnClickListener(new View.OnClickListener {
             override def onClick(view: View): Unit = if (provider != null)
-              inner2.dispatch(SearchEvent(store.LyricsSearchInfo(artist.getText.toString, album.getText.toString, track.getText.toString), provider))
+              inner2.dispatch(SearchEvent(store.LyricsSearchInfo(custom_artist.getText, custom_album.getText, custom_track.getText), provider))
             else
               Toast.makeText(activity, "Please select provider", Toast.LENGTH_LONG).show
           })

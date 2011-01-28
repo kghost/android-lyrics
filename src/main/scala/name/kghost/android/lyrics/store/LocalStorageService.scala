@@ -66,7 +66,7 @@ class LocalStorageService(context: Context) extends LyricsService { srv =>
       try {
         val cursor = db.query("lyrics", Array("id", "type", "lyrics_artist", "lyrics_album",
           "lyrics_track", "lyrics"), """"artist" = ? AND "album" = ? AND "track" = ?""",
-          Array(info.artist, info.album, info.track), null, null, null)
+          Array(info.artist.toString, info.album.toString, info.track.toString), null, null, null)
         try {
           getResult(cursor, Nil)
         } finally {
@@ -94,9 +94,9 @@ class LocalStorageService(context: Context) extends LyricsService { srv =>
     val db = sql.getWritableDatabase
     try {
       if (0 > db.insertOrThrow("lyrics", null, With(new ContentValues) { v =>
-        v.put("artist", info.artist)
-        v.put("album", info.album)
-        v.put("track", info.track)
+        v.put("artist", info.artist.toString)
+        v.put("album", info.album.toString)
+        v.put("track", info.track.toString)
         v.put("lyrics_artist", lyrics.artist)
         v.put("lyrics_album", lyrics.album)
         v.put("lyrics_track", lyrics.track)
