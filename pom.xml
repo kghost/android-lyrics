@@ -178,6 +178,8 @@
 					<obfuscate>false</obfuscate>
 					<options>
 						<option>-keep public class * extends android.app.Activity</option>
+						<option>-keep public class * extends
+							android.preference.PreferenceActivity</option>
 						<option>-keep public class * extends android.app.Application</option>
 						<option>-keep public class * extends android.app.Service</option>
 						<option>-keep public class * extends

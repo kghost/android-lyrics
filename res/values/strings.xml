@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 	<string name="app_name">Lyrics</string>
+	<string name="app_preferences">Lyrics Preferences</string>
 	<string name="ERROR_CANNOT_BIND_MEDIASERIVCE">can\'t bind media service</string>
 	<string name="ERROR_MEDIA_REMOTE_EXCEPTION">error while communicate with media service</string>
 	<string name="ERROR_MEDIA_NOT_READY">media not ready</string>

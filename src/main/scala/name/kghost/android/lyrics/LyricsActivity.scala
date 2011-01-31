@@ -647,7 +647,11 @@ class LyricsActivity extends Activity { activity =>
     item.getItemId() match {
       case R.id.MenuSave => machine.dispatch(MenuSaveEvent()); true
       case R.id.MenuDelete => machine.dispatch(MenuDeleteEvent()); true
-      case R.id.ChooseProvider => chooseProvider; true
+      case R.id.MenuPreferences => {
+        val i = new Intent(activity, classOf[LyricsPreferences])
+        startActivity(i)
+        true
+      }
       case _ => super.onOptionsItemSelected(item)
     }
 

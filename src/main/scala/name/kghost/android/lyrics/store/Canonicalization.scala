@@ -15,8 +15,8 @@ trait Canonicalization extends Function1[CharSequence, CharSequence] {
 }
 
 object GlobalCanonicalization extends Canonicalization {
-  private trait Switch { var enable: Boolean }
-  val RemoveBracket extends Switch with RemoveBracket { override var enable = true }
+  trait Switch { var enable: Boolean }
+  object RemoveBracket extends Switch with RemoveBracket { override var enable = true }
   private val trans: List[Switch with Canonicalization] = RemoveBracket :: Nil
   override def apply(s: CharSequence): CharSequence = {
     var r = s
