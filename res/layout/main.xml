@@ -18,48 +18,5 @@
 
 	<RelativeLayout android:id="@+id/Main"
 		android:layout_width="fill_parent" android:layout_height="fill_parent"
-		android:layout_below="@+id/Header" android:layout_above="@+id/Bottom" />
-
-	<LinearLayout android:id="@+id/Bottom"
-		android:orientation="vertical" android:layout_width="fill_parent"
-		android:layout_height="wrap_content" android:layout_alignParentBottom="true">
-
-		<LinearLayout android:layout_width="fill_parent"
-			android:layout_height="wrap_content" android:gravity="center">
-			<FrameLayout android:layout_width="0dip"
-				android:layout_height="wrap_content" android:layout_weight="1">
-				<Button android:id="@+id/Prev" android:layout_width="wrap_content"
-					android:layout_height="wrap_content" android:background="@android:drawable/ic_media_previous"
-					android:layout_gravity="center" />
-			</FrameLayout>
-			<FrameLayout android:layout_width="0dip"
-				android:layout_height="wrap_content" android:layout_weight="1"
-				android:visibility="gone">
-				<!-- background should be stop which doesn't exist :( -->
-				<Button android:id="@+id/Stop" android:layout_width="wrap_content"
-					android:layout_height="wrap_content" android:background="@android:drawable/ic_media_pause"
-					android:layout_gravity="center" />
-			</FrameLayout>
-			<FrameLayout android:id="@+id/FramePlay"
-				android:layout_width="0dip" android:layout_height="wrap_content"
-				android:layout_weight="1">
-				<Button android:id="@+id/Play" android:layout_width="wrap_content"
-					android:layout_height="wrap_content" android:background="@android:drawable/ic_media_play"
-					android:layout_gravity="center" />
-			</FrameLayout>
-			<FrameLayout android:id="@+id/FramePause"
-				android:layout_width="0dip" android:layout_height="wrap_content"
-				android:layout_weight="1" android:visibility="gone">
-				<Button android:id="@+id/Pause" android:layout_width="wrap_content"
-					android:layout_height="wrap_content" android:background="@android:drawable/ic_media_pause"
-					android:layout_gravity="center" />
-			</FrameLayout>
-			<FrameLayout android:layout_width="0dip"
-				android:layout_height="wrap_content" android:layout_weight="1">
-				<Button android:id="@+id/Next" android:layout_width="wrap_content"
-					android:layout_height="wrap_content" android:background="@android:drawable/ic_media_next"
-					android:layout_gravity="center" />
-			</FrameLayout>
-		</LinearLayout>
-	</LinearLayout>
+		android:layout_below="@+id/Header" android:layout_alignParentBottom="true" />
 </RelativeLayout>

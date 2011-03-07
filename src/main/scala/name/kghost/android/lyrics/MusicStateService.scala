@@ -12,7 +12,8 @@ class MusicStateService extends Service {
   private val mBinder: IBinder = new MusicStateServiceBinder
 
   override def onStartCommand(intent: Intent, flags: Int, startId: Int): Int = {
-    if (intent.getAction == "com.android.music.playbackcomplete") {
+    if (intent.getBooleanExtra("playing", false) != true
+      || intent.getAction == "com.android.music.playbackcomplete") {
       info = null
       offset = 0
       this.stopSelf(startId)
@@ -30,7 +31,7 @@ class MusicStateService extends Service {
       } else {
         info = null
         offset = 0
-        Log.i("MusicStateService", "Stopped")
+        Log.w("MusicStateService", "Error.1")
       }
       sendBroadcast(new Intent("info.kghost.android.lyrics.UPDATE"))
       return Service.START_STICKY;

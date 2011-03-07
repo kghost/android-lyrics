@@ -77,7 +77,7 @@ class LyricsActivity extends Activity { activity =>
 
   private class MediaServiceReadyState(c: ServiceConnection, srv: MusicStateService#MusicStateServiceBinder) extends State {
     private case class MusicPauseEvent extends Event
-    private case class MusicResumeEvent(val info: store.LyricsSearchInfo, val offset: Long) extends Event
+    private case class MusicResumeEvent(val info: store.LyricsSearchInfo) extends Event
 
     private var inner: StateMachine = null
 
@@ -89,7 +89,7 @@ class LyricsActivity extends Activity { activity =>
     private def update = {
       val info = srv.getInfo
       if (info != null)
-        fsm.dispatch(MusicResumeEvent(info, srv.getOffset))
+        fsm.dispatch(MusicResumeEvent(info))
       else
         fsm.dispatch(MusicPauseEvent());
     }
@@ -173,12 +173,12 @@ class LyricsActivity extends Activity { activity =>
         main.removeView(v)
       }
       override def action(ev: Event): Option[State] = ev match {
-        case e: MusicResumeEvent => Some(new PlayingState(e.info, e.offset))
+        case e: MusicResumeEvent => Some(new PlayingState(e.info))
         case e: MusicPauseEvent => None
         case e => super.action(e)
       }
     }
-    private class PlayingState(info: store.LyricsSearchInfo, offset: Long) extends State {
+    private class PlayingState(info: store.LyricsSearchInfo) extends State {
       private var inner: StateMachine = null
       private var inner2: StateMachine = null
 
@@ -206,11 +206,10 @@ class LyricsActivity extends Activity { activity =>
       override def action(ev: Event): Option[State] = ev match {
         case e: MusicResumeEvent =>
           if (info != e.info)
-            Some(new PlayingState(e.info, e.offset))
-          else if (e.offset != offset) {
+            Some(new PlayingState(e.info))
+          else {
             inner.dispatch(e); None
-          } else
-            None
+          }
         case e: MusicPauseEvent => Some(new NotPlayingState)
         case e: ActivitySearchEvent => customSearch; None
         case e => inner.dispatch(e); None
