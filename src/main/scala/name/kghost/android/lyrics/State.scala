@@ -4,10 +4,11 @@ import scala.collection.mutable.Queue
 import android.util.Log
 
 class State {
-  private var isActive_ = false
-  final def isActive = isActive_
-  final def internalEntry: Unit = { isActive_ = true; entry }
-  final def internalExit: Unit = { exit; isActive_ = false }
+  private var fsm_ : StateMachine = null
+  final def fsm = fsm_
+  final def isActive = fsm_ != null
+  final def internalEntry(m: StateMachine): Unit = { fsm_ = m; entry }
+  final def internalExit: Unit = { exit; fsm_ = null }
   protected def entry: Unit = {}
   protected def exit: Unit = {}
   def action(ev: Event): Option[State] = ev match {
@@ -18,26 +19,28 @@ class State {
 class FinalState extends State
 
 class StateMachine(private var state: State) {
-  state.internalEntry
   private val queue = new Queue[Event]
   private var dispatching = false
+  lockAndDispatch({ () => state.internalEntry(this) })
   def dispatch(ev: Event): Unit = {
-    if (dispatching) {
+    if (dispatching)
       queue.enqueue(ev)
-    } else {
-      dispatching = true
-      dispatch2(ev)
-      while (!queue.isEmpty) {
-        dispatch2(queue.dequeue)
-      }
-      dispatching = false
+    else
+      lockAndDispatch({ () => dispatch2(ev) })
+  }
+  private def lockAndDispatch(f: () => Unit): Unit = {
+    dispatching = true
+    f()
+    while (!queue.isEmpty) {
+      dispatch2(queue.dequeue)
     }
+    dispatching = false
   }
   private def dispatch2(ev: Event): Unit = state.action(ev) match {
     case Some(n: State) => {
       state.internalExit
       state = n
-      state.internalEntry
+      state.internalEntry(this)
     }
     case None => Unit
   }

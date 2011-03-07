@@ -1,12 +1,12 @@
 package name.kghost.android.lyrics
 
+import java.util.Date
 import android.widget.{ AdapterView, BaseAdapter, Button, ImageView, ListView, TextView }
 import android.view.{ LayoutInflater, Menu, MenuItem, View, ViewGroup, Window }
 import android.app.{ Activity, Dialog }
 import android.content.{ ComponentName, BroadcastReceiver, Context, DialogInterface, Intent, IntentFilter, ServiceConnection }
 import android.os.{ Bundle, IBinder, RemoteException }
 import android.widget.Toast
-import com.android.music.IMediaPlaybackService
 import utils.With
 
 class LyricsActivity extends Activity { activity =>
@@ -21,7 +21,7 @@ class LyricsActivity extends Activity { activity =>
   private case class ActivityResumeEvent extends Event
   private case class ActivitySearchEvent extends Event
 
-  private case class MediaServiceEvent(val media: IMediaPlaybackService) extends Event
+  private case class MediaServiceEvent(val c: ServiceConnection, val srv: MusicStateService#MusicStateServiceBinder) extends Event
   private case class MediaServiceNullEvent extends Event
 
   private case class MenuSaveEvent extends Event
@@ -29,23 +29,17 @@ class LyricsActivity extends Activity { activity =>
 
   private def defaultProvider = factory.get(getSharedPreferences(LyricsActivity.PREFS_NAME, 0).getString(LyricsActivity.PREFS_DEFAULT_PROVIDER, ""))
 
-  private val media_conn = new ServiceConnection() {
-    override def onServiceConnected(className: ComponentName, s: IBinder): Unit = {
-      machine.dispatch(MediaServiceEvent(IMediaPlaybackService.Stub.asInterface(s)))
-    }
-
-    override def onServiceDisconnected(className: ComponentName): Unit = {
-      machine.dispatch(MediaServiceNullEvent())
-    }
-  };
-
   private class MediaServiceErrorState extends State {
     override def entry: Unit = {
       setContentView(R.layout.error)
     }
     override def action(ev: Event): Option[State] = ev match {
-      case e: MediaServiceEvent => Some(new MediaServiceReadyState(e.media))
+      case e: MediaServiceEvent => Some(new MediaServiceReadyState(e.c, e.srv))
       case e: MediaServiceNullEvent => None
+      case e: ActivityResumeEvent => {
+        Toast.makeText(activity, R.string.ERROR_CANNOT_BIND_MEDIASERIVCE, Toast.LENGTH_LONG).show()
+        None
+      }
       case e => super.action(e)
     }
   }
@@ -54,203 +48,120 @@ class LyricsActivity extends Activity { activity =>
     override def entry: Unit = {
       setContentView(R.layout.loading)
 
-      if (!bindService((new Intent()).setClassName("com.android.music", "com.android.music.MediaPlaybackService"), media_conn, Context.BIND_AUTO_CREATE)) {
+      lazy val c: ServiceConnection = new ServiceConnection() {
+        override def onServiceConnected(className: ComponentName, s: IBinder): Unit = s match {
+          case srv: MusicStateService#MusicStateServiceBinder =>
+            fsm.dispatch(MediaServiceEvent(c, srv))
+          case srv => {
+            Toast.makeText(activity, R.string.ERROR_CANNOT_BIND_MEDIASERIVCE, Toast.LENGTH_LONG).show()
+            fsm.dispatch(MediaServiceNullEvent())
+          }
+        }
+
+        override def onServiceDisconnected(className: ComponentName): Unit = {
+          fsm.dispatch(MediaServiceNullEvent())
+        }
+      }
+
+      if (!bindService(new Intent().setClass(activity, classOf[MusicStateService]), c, Context.BIND_AUTO_CREATE)) {
         Toast.makeText(activity, R.string.ERROR_CANNOT_BIND_MEDIASERIVCE, Toast.LENGTH_LONG).show()
-        machine.dispatch(MediaServiceNullEvent())
+        fsm.dispatch(MediaServiceNullEvent())
       }
     }
     override def action(ev: Event): Option[State] = ev match {
-      case e: MediaServiceEvent => Some(new MediaServiceReadyState(e.media))
+      case e: MediaServiceEvent => Some(new MediaServiceReadyState(e.c, e.srv))
       case e: MediaServiceNullEvent => Some(new MediaServiceErrorState)
       case e => super.action(e)
     }
   }
 
-  private class MediaServiceReadyState(private val media: IMediaPlaybackService) extends State {
+  private class MediaServiceReadyState(c: ServiceConnection, srv: MusicStateService#MusicStateServiceBinder) extends State {
+    private case class MusicPauseEvent extends Event
+    private case class MusicResumeEvent(val info: store.LyricsSearchInfo, val offset: Long) extends Event
+
     private var inner: StateMachine = null
 
     private var main: ViewGroup = null
     private var artist: TextView = null
     private var album: TextView = null
     private var track: TextView = null
-    private var play: View = null
-    private var pause: View = null
 
-    private case class PlayingEvent(val info: store.LyricsSearchInfo) extends Event
-    private case class NotPlayingEvent extends Event
-    private case class MusicPauseEvent extends Event
-    private case class MusicResumeEvent extends Event
+    private def update = {
+      val info = srv.getInfo
+      if (info != null)
+        fsm.dispatch(MusicResumeEvent(info, srv.getOffset))
+      else
+        fsm.dispatch(MusicPauseEvent());
+    }
 
-    private def media_service_wrapper[T](fun: => T): Option[T] = try {
-      Some(fun)
-    } catch {
-      case ex: RemoteException =>
-        With(None) { x =>
-          Toast.makeText(activity, R.string.ERROR_MEDIA_REMOTE_EXCEPTION, Toast.LENGTH_LONG).show()
-        }
+    private var receiverRegisted = false
+    private var receiver = new BroadcastReceiver {
+      override def onReceive(context: Context, intent: Intent): Unit = update
     }
 
     override def entry: Unit = {
       setContentView(R.layout.main)
 
-      initMediaControl
-
       main = findViewById(R.id.Main).asInstanceOf[ViewGroup]
       artist = findViewById(R.id.Artist).asInstanceOf[TextView]
       album = findViewById(R.id.Album).asInstanceOf[TextView]
       track = findViewById(R.id.Track).asInstanceOf[TextView]
-      play = findViewById(R.id.FramePlay)
-      pause = findViewById(R.id.FramePause)
+
+      registerReceiver(receiver, With(new IntentFilter()) {
+        _.addAction("info.kghost.android.lyrics.UPDATE")
+      })
+      receiverRegisted = true
+      update
 
       inner = new StateMachine(new NotPlayingState)
-      if (isStart) update
     }
     override def exit: Unit = {
-      if (isStart) unregisterReceiver(receiver)
       inner.finish
       inner = null
 
-      play = null
-      pause = null
       artist = null
       album = null
       track = null
       main = null
 
-      unbindService(media_conn)
+      unbindService(c)
     }
     override def action(ev: Event): Option[State] = ev match {
       case e: MediaServiceEvent => None
       case e: MediaServiceNullEvent => Some(new MediaServiceErrorState)
-      case e: PlayingEvent =>
+      case e: MusicResumeEvent =>
         With(None) { x =>
           artist.setText(e.info.artist)
           album.setText(e.info.album)
           track.setText(e.info.track)
           inner.dispatch(ev)
         }
-      case e: NotPlayingEvent =>
+      case e: MusicPauseEvent =>
         With(None) { x =>
           artist.setText("")
           album.setText("")
           track.setText("")
-          inner.dispatch(e)
+          inner.dispatch(ev)
         }
-      case e: ActivityStartEvent =>
-        With(None) { x =>
-          update
+      case e: ActivityResumeEvent => {
+        if (!receiverRegisted) {
+          registerReceiver(receiver, With(new IntentFilter()) {
+            _.addAction("info.kghost.android.lyrics.UPDATE")
+          })
+          receiverRegisted = true
         }
-      case e: ActivityStopEvent =>
-        With(None) { x =>
+        update
+        None
+      }
+      case e: ActivityPauseEvent => {
+        if (receiverRegisted) {
           unregisterReceiver(receiver)
+          receiverRegisted = false
         }
+        inner.dispatch(ev)
+        None
+      }
       case e: Event => inner.dispatch(e); None
-    }
-
-    private def initMediaControl: Unit = {
-      findViewById(R.id.Play).asInstanceOf[Button].setOnClickListener(new View.OnClickListener() {
-        override def onClick(v: View): Unit = media_service_wrapper {
-          if (media.getAudioId > 0)
-            media.play
-          else
-            media.next
-        }
-      })
-
-      findViewById(R.id.Stop).asInstanceOf[Button].setOnClickListener(new View.OnClickListener() {
-        override def onClick(v: View): Unit = media_service_wrapper {
-          media.stop
-          updateMediaControl // XXX: media service do not send stop broadcast, do it explicit
-          updateMusic(null)
-        }
-      })
-
-      findViewById(R.id.Pause).asInstanceOf[Button].setOnClickListener(new View.OnClickListener() {
-        override def onClick(v: View): Unit = media_service_wrapper {
-          media.pause
-        }
-      })
-
-      findViewById(R.id.Next).asInstanceOf[Button].setOnClickListener(new View.OnClickListener() {
-        override def onClick(v: View): Unit = media_service_wrapper {
-          media.next
-        }
-      })
-
-      findViewById(R.id.Prev).asInstanceOf[Button].setOnClickListener(new View.OnClickListener() {
-        override def onClick(v: View): Unit = media_service_wrapper {
-          media.prev
-        }
-      })
-    }
-
-    private def updateMediaControl: Unit = media_service_wrapper {
-      if (media.isPlaying) {
-        play.setVisibility(View.GONE)
-        pause.setVisibility(View.VISIBLE)
-      } else {
-        play.setVisibility(View.VISIBLE)
-        pause.setVisibility(View.GONE)
-      }
-    }
-
-    private def tryUpdateMusic: Unit = updateMusic(media_service_wrapper {
-      if (media.getAudioId >= 0)
-        store.LyricsSearchInfo(media.getArtistName, media.getAlbumName, media.getTrackName)
-      else
-        null
-    } match {
-      case Some(x) => x
-      case None => null
-    })
-    private def updateMusic(info: store.LyricsSearchInfo): Unit = if (info != null) {
-      machine.dispatch(new PlayingEvent(info))
-    } else {
-      machine.dispatch(NotPlayingEvent())
-    }
-
-    private final val PLAYSTATE_CHANGED = "com.android.music.playstatechanged"
-    private final val META_CHANGED = "com.android.music.metachanged"
-    private final val QUEUE_CHANGED = "com.android.music.queuechanged"
-    private final val PLAYBACK_COMPLETE = "com.android.music.playbackcomplete"
-    private final val ASYNC_OPEN_COMPLETE = "com.android.music.asyncopencomplete"
-
-    private val receiver = new BroadcastReceiver {
-      override def onReceive(ctx: android.content.Context, intent: android.content.Intent): Unit = intent.getAction match {
-        case PLAYSTATE_CHANGED => {
-          updateMediaControl
-          media_service_wrapper {
-            if (media.isPlaying)
-              machine.dispatch(MusicResumeEvent())
-            else
-              machine.dispatch(MusicPauseEvent())
-          }
-        }
-        case META_CHANGED =>
-          if (intent.getLongExtra("id", -1) >= 0)
-            updateMusic(store.LyricsSearchInfo(intent.getStringExtra("artist"),
-              intent.getStringExtra("album"),
-              intent.getStringExtra("track")))
-          else
-            tryUpdateMusic
-        case PLAYBACK_COMPLETE => {
-          updateMusic(null)
-          updateMediaControl
-          machine.dispatch(MusicPauseEvent())
-        }
-      }
-    }
-
-    private val filter = With(new IntentFilter()) { f =>
-      f.addAction(PLAYSTATE_CHANGED)
-      f.addAction(META_CHANGED)
-      f.addAction(PLAYBACK_COMPLETE)
-    }
-
-    private def update: Unit = {
-      registerReceiver(receiver, filter)
-      tryUpdateMusic
-      updateMediaControl
     }
 
     private class NotPlayingState extends State {
@@ -262,12 +173,12 @@ class LyricsActivity extends Activity { activity =>
         main.removeView(v)
       }
       override def action(ev: Event): Option[State] = ev match {
-        case e: PlayingEvent => Some(new PlayingState(e.info))
-        case e: NotPlayingEvent => None
+        case e: MusicResumeEvent => Some(new PlayingState(e.info, e.offset))
+        case e: MusicPauseEvent => None
         case e => super.action(e)
       }
     }
-    private class PlayingState(private val info: store.LyricsSearchInfo) extends State {
+    private class PlayingState(info: store.LyricsSearchInfo, offset: Long) extends State {
       private var inner: StateMachine = null
       private var inner2: StateMachine = null
 
@@ -293,12 +204,14 @@ class LyricsActivity extends Activity { activity =>
         inner = null
       }
       override def action(ev: Event): Option[State] = ev match {
-        case e: PlayingEvent =>
+        case e: MusicResumeEvent =>
           if (info != e.info)
-            Some(new PlayingState(e.info))
-          else
+            Some(new PlayingState(e.info, e.offset))
+          else if (e.offset != offset) {
+            inner.dispatch(e); None
+          } else
             None
-        case e: NotPlayingEvent => Some(new NotPlayingState)
+        case e: MusicPauseEvent => Some(new NotPlayingState)
         case e: ActivitySearchEvent => customSearch; None
         case e => inner.dispatch(e); None
       }
@@ -532,21 +445,7 @@ class LyricsActivity extends Activity { activity =>
         override def entry: Unit = {
           timelineAdapter = new LyricsTimelineAdapter(v, inflater, lyrics.timeline)
           v.setAdapter(timelineAdapter)
-          v.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
-            override def onItemLongClick(parentView: AdapterView[_], childView: View, position: Int, id: Long): Boolean =
-              With(true) { x =>
-                val start = lyrics.timeline(position)._1
-                media_service_wrapper {
-                  media.play
-                  media.seek(start)
-                  timelineAdapter.start(start)
-                }
-              }
-          })
-          v.setLongClickable(true)
-          media_service_wrapper {
-            if (media.isPlaying) timelineAdapter.start(media.position.toInt)
-          }
+          timelineAdapter.start(((new Date).getTime - srv.getOffset).toInt)
 
           main.addView(v)
         }
@@ -578,16 +477,12 @@ class LyricsActivity extends Activity { activity =>
           case e: MusicPauseEvent => timelineAdapter.stop; None
           case e: MusicResumeEvent =>
             With(None) { x =>
-              media_service_wrapper {
-                if (media.isPlaying) timelineAdapter.start(media.position.toInt)
-              }
+              timelineAdapter.start(((new Date).getTime - srv.getOffset).toInt)
             }
           case e: ActivityPauseEvent => timelineAdapter.stop; None
           case e: ActivityResumeEvent =>
             With(None) { x =>
-              media_service_wrapper {
-                if (media.isPlaying) timelineAdapter.start(media.position.toInt)
-              }
+              timelineAdapter.start(((new Date).getTime - srv.getOffset).toInt)
             }
           case e => super.action(e)
         }

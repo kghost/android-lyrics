@@ -10,6 +10,18 @@
 				<category android:name="android.intent.category.LAUNCHER" />
 			</intent-filter>
 		</activity>
+		<service android:name=".MusicStateService" android:exported="false" />
+		<receiver android:name=".MusicStateReceiver">
+			<intent-filter>
+				<action android:name="com.android.music.playstatechanged" />
+				<action android:name="com.android.music.playbackcomplete" />
+				<action android:name="com.android.music.metachanged" />
+				<action android:name="com.android.music.queuechanged" />
+				<action android:name="com.htc.music.metachanged" />
+				<action android:name="com.htc.music.playbackcomplete" />
+				<action android:name="com.htc.music.playstatechanged" />
+			</intent-filter>
+		</receiver>
 	</application>
 	<uses-permission android:name="android.permission.INTERNET" />
 </manifest>
