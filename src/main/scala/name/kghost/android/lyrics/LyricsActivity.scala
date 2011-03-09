@@ -282,13 +282,16 @@ class LyricsActivity extends Activity { activity =>
 
       override def entry: Unit = {
         inner = new StateMachine(new NoLyricsState)
-        inner2 = new StateMachine(new SearchIdleState)
-
-        inner2.dispatch(SearchEvent(info, factory.local))
+        if (isStart) {
+          inner2 = new StateMachine(new SearchIdleState)
+          inner2.dispatch(SearchEvent(info, factory.local))
+        }
       }
       override def exit: Unit = {
-        inner2.finish
-        inner2 = null
+        if (isStart) {
+          inner2.finish
+          inner2 = null
+        }
         inner.finish
         inner = null
       }
@@ -300,6 +303,16 @@ class LyricsActivity extends Activity { activity =>
             None
         case e: NotPlayingEvent => Some(new NotPlayingState)
         case e: ActivitySearchEvent => customSearch; None
+        case e: ActivityStartEvent => {
+          inner2 = new StateMachine(new SearchIdleState)
+          inner2.dispatch(SearchEvent(info, factory.local))
+          None
+        }
+        case e: ActivityStopEvent => {
+          inner2.finish
+          inner2 = null
+          None
+        }
         case e => inner.dispatch(e); None
       }
 
@@ -394,7 +407,7 @@ class LyricsActivity extends Activity { activity =>
             }) { _.execute(info) }
           } else
             inner2.dispatch(SearchDoneEvent())
-        override def exit: Unit = if (task != null) task.cancel(true)
+        override def exit: Unit = if (task != null) task.forceCancel
         override def action(ev: Event): Option[State] = ev match {
           case e: SearchDoneEvent => Some(new SearchIdleState)
           case e: SearchCandidateEvent => Some(new SelectCandidateState(e.info))
@@ -497,7 +510,7 @@ class LyricsActivity extends Activity { activity =>
                 inner2.dispatch(SearchDoneEvent())
             }
           }) { _.execute(info) }
-        override def exit: Unit = task.cancel(true)
+        override def exit: Unit = task.forceCancel
         override def action(ev: Event): Option[State] = ev match {
           case e: SearchDoneEvent => Some(new SearchIdleState)
           case e => super.action(e)

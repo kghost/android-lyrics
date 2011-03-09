@@ -5,11 +5,15 @@ import android.app.ProgressDialog
 import android.os.AsyncTask
 
 abstract class AsyncTaskWithProgress[A, Result](context: Context, text: String) extends AsyncTask[AnyRef, A, Result] { task =>
-  private val listener = new DialogInterface.OnCancelListener {
-    override def onCancel(dialog: DialogInterface): Unit = task.cancel(true)
-  }
   private val dialog = With(new ProgressDialog(context)) {
-    _.setOnCancelListener(listener)
+    _.setOnCancelListener(new DialogInterface.OnCancelListener {
+      override def onCancel(dialog: DialogInterface): Unit = task.cancel(true)
+    })
+  }
+
+  def forceCancel = {
+    dialog.dismiss
+    super.cancel(true)
   }
 
   override protected[utils] def onPreExecute(): Unit = {
